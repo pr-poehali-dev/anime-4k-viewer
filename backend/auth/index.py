@@ -16,6 +16,9 @@ from typing import Dict, Any, Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import bcrypt
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 def get_db_connection():
     dsn = os.environ.get('DATABASE_URL')
@@ -89,6 +92,48 @@ def verify_telegram_data(data: Dict) -> bool:
     calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     
     return calculated_hash == check_hash
+
+def send_email(to_email: str, subject: str, html_content: str) -> bool:
+    try:
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_user = os.environ.get('SMTP_USER', '')
+        smtp_password = os.environ.get('SMTP_PASSWORD', '')
+        
+        if not smtp_user or not smtp_password:
+            print('SMTP credentials not configured')
+            return False
+        
+        msg = MIMEMultipart('alternative')
+        msg['From'] = smtp_user
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        html_part = MIMEText(html_content, 'html', 'utf-8')
+        msg.attach(html_part)
+        
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        
+        return True
+    except Exception as e:
+        print(f'Email send error: {e}')
+        return False
+
+def create_reset_token(conn, user_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now() + timedelta(hours=1)
+    
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO password_reset_tokens (user_id, token, expires_at)
+        VALUES (%s, %s, %s)
+    ''', (user_id, token, expires_at))
+    conn.commit()
+    
+    return token
 
 def verify_jwt_token(token: str) -> Dict[str, Any]:
     secret = os.environ.get('JWT_SECRET', 'default-secret-key')
@@ -247,6 +292,118 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'statusCode': 200,
                 'headers': cors_headers,
                 'body': json.dumps({'token': jwt_token, 'session_token': token, 'user': user}),
+                'isBase64Encoded': False
+            }
+        
+        # Запрос восстановления пароля
+        elif action == 'forgot_password':
+            email = body_data.get('email', '').lower().strip()
+            
+            if not email:
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Email обязателен'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute('''
+                SELECT id, username FROM users 
+                WHERE email = %s AND provider = %s AND is_active = TRUE
+            ''', (email, 'email'))
+            
+            user = cur.fetchone()
+            
+            if user:
+                reset_token = create_reset_token(conn, user['id'])
+                site_url = os.environ.get('SITE_URL', window_location_origin)
+                reset_link = f"{site_url}/reset-password?token={reset_token}"
+                
+                html_content = f'''
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #333;">Восстановление пароля</h2>
+                    <p>Здравствуйте, {user['username']}!</p>
+                    <p>Вы запросили восстановление пароля для вашего аккаунта на DokiDokiHub.</p>
+                    <p>Нажмите на кнопку ниже, чтобы создать новый пароль:</p>
+                    <a href="{reset_link}" style="display: inline-block; padding: 12px 24px; background-color: #0077FF; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0;">Восстановить пароль</a>
+                    <p>Или скопируйте эту ссылку в браузер:</p>
+                    <p style="color: #666; font-size: 14px;">{reset_link}</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 30px;">Ссылка действительна 1 час. Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.</p>
+                </body>
+                </html>
+                '''
+                
+                send_email(email, 'Восстановление пароля - DokiDokiHub', html_content)
+                log_security_event(conn, user['id'], 'password_reset_requested', ip_address, 'low')
+            
+            conn.close()
+            return {
+                'statusCode': 200,
+                'headers': cors_headers,
+                'body': json.dumps({'message': 'Если email существует, на него отправлена ссылка для восстановления'}),
+                'isBase64Encoded': False
+            }
+        
+        # Сброс пароля по токену
+        elif action == 'reset_password':
+            token = body_data.get('token', '')
+            new_password = body_data.get('password', '')
+            
+            if not token or not new_password:
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Токен и новый пароль обязательны'}),
+                    'isBase64Encoded': False
+                }
+            
+            if len(new_password) < 8:
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Пароль должен быть минимум 8 символов'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute('''
+                SELECT user_id FROM password_reset_tokens
+                WHERE token = %s AND expires_at > CURRENT_TIMESTAMP AND used = FALSE
+            ''', (token,))
+            
+            reset_data = cur.fetchone()
+            
+            if not reset_data:
+                log_security_event(conn, None, 'invalid_reset_token', ip_address, 'medium')
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Недействительный или истекший токен'}),
+                    'isBase64Encoded': False
+                }
+            
+            password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            cur.execute('''
+                UPDATE users SET password_hash = %s, failed_login_attempts = 0, locked_until = NULL
+                WHERE id = %s
+            ''', (password_hash, reset_data['user_id']))
+            
+            cur.execute('''
+                UPDATE password_reset_tokens SET used = TRUE WHERE token = %s
+            ''', (token,))
+            
+            conn.commit()
+            log_security_event(conn, reset_data['user_id'], 'password_reset_completed', ip_address, 'low')
+            
+            conn.close()
+            return {
+                'statusCode': 200,
+                'headers': cors_headers,
+                'body': json.dumps({'message': 'Пароль успешно изменен'}),
                 'isBase64Encoded': False
             }
         

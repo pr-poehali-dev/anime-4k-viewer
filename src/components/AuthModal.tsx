@@ -13,20 +13,24 @@ interface AuthModalProps {
 
 export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleEmailAuth = async () => {
     setError('');
+    setSuccessMessage('');
     setIsLoading(true);
     
     try {
-      const action = authMode === 'register' ? 'register' : 'login';
+      const action = authMode === 'register' ? 'register' : authMode === 'forgot' ? 'forgot_password' : 'login';
       const body = authMode === 'register' 
         ? { action, email, password, username }
+        : authMode === 'forgot'
+        ? { action, email }
         : { action, email, password };
       
       const response = await fetch(AUTH_URL, {
@@ -42,7 +46,9 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         return;
       }
       
-      if (data.token) {
+      if (authMode === 'forgot') {
+        setSuccessMessage('Ссылка для восстановления пароля отправлена на ваш email');
+      } else if (data.token) {
         onSuccess(data.token, data.user);
       }
     } catch (error) {
@@ -114,28 +120,40 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         </div>
 
         <div className="space-y-4">
-          <div className="flex gap-2 p-1 bg-muted rounded-lg mb-4">
+          {authMode !== 'forgot' && (
+            <div className="flex gap-2 p-1 bg-muted rounded-lg mb-4">
+              <button
+                onClick={() => { setAuthMode('login'); setError(''); setSuccessMessage(''); }}
+                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
+                  authMode === 'login' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Вход
+              </button>
+              <button
+                onClick={() => { setAuthMode('register'); setError(''); setSuccessMessage(''); }}
+                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
+                  authMode === 'register' 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Регистрация
+              </button>
+            </div>
+          )}
+
+          {authMode === 'forgot' && (
             <button
-              onClick={() => { setAuthMode('login'); setError(''); }}
-              className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-                authMode === 'login' 
-                  ? 'bg-background text-foreground shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              onClick={() => { setAuthMode('login'); setError(''); setSuccessMessage(''); }}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
             >
-              Вход
+              <Icon name="ArrowLeft" size={16} />
+              Назад ко входу
             </button>
-            <button
-              onClick={() => { setAuthMode('register'); setError(''); }}
-              className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-                authMode === 'register' 
-                  ? 'bg-background text-foreground shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Регистрация
-            </button>
-          </div>
+          )}
 
           {error && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
@@ -143,59 +161,105 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             </div>
           )}
 
+          {successMessage && (
+            <div className="p-3 bg-green-500/10 text-green-600 rounded-lg text-sm">
+              {successMessage}
+            </div>
+          )}
+
           <div className="space-y-3">
-            {authMode === 'register' && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Имя</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Ваше имя"
-                />
-              </div>
+            {authMode === 'forgot' ? (
+              <>
+                <h3 className="text-lg font-semibold mb-2">Восстановление пароля</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Введите ваш email, и мы отправим ссылку для сброса пароля
+                </p>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="your@email.com"
+                  />
+                </div>
+                <button
+                  onClick={handleEmailAuth}
+                  disabled={isLoading || !email}
+                  className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? 'Отправляем...' : 'Отправить ссылку'}
+                </button>
+              </>
+            ) : (
+              <>
+                {authMode === 'register' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Имя</label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Ваше имя"
+                    />
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="your@email.com"
+                  />
+                </div>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium">Пароль</label>
+                    {authMode === 'login' && (
+                      <button
+                        onClick={() => { setAuthMode('forgot'); setError(''); setSuccessMessage(''); }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Забыли пароль?
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Минимум 8 символов"
+                  />
+                </div>
+
+                <button
+                  onClick={handleEmailAuth}
+                  disabled={isLoading || !email || !password || (authMode === 'register' && !username)}
+                  className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? 'Загрузка...' : authMode === 'register' ? 'Зарегистрироваться' : 'Войти'}
+                </button>
+              </>
             )}
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="your@email.com"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Пароль</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Минимум 8 символов"
-              />
-            </div>
-
-            <button
-              onClick={handleEmailAuth}
-              disabled={isLoading || !email || !password || (authMode === 'register' && !username)}
-              className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-50"
-            >
-              {isLoading ? 'Загрузка...' : authMode === 'register' ? 'Зарегистрироваться' : 'Войти'}
-            </button>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
+          {authMode !== 'forgot' && (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-card text-muted-foreground">или войдите через</span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-card text-muted-foreground">или войдите через</span>
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <button
