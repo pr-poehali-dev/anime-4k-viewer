@@ -83,6 +83,8 @@ export default function Index() {
   const [selectedAnime, setSelectedAnime] = useState<any | null>(null);
   const [animeList, setAnimeList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
 
   useEffect(() => {
     fetchAnime();
@@ -102,8 +104,19 @@ export default function Index() {
   };
 
   const displayAnime = animeList.length > 0 ? animeList : MOCK_ANIME;
+  
+  const allGenres = Array.from(new Set(displayAnime.flatMap(anime => anime.genres || [])));
+  const allYears = Array.from(new Set(displayAnime.map(anime => anime.year).filter(Boolean))).sort((a, b) => b - a);
+  
+  const filteredAnime = displayAnime.filter(anime => {
+    const matchesSearch = anime.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesGenre = selectedGenre === 'all' || (anime.genres && anime.genres.includes(selectedGenre));
+    const matchesYear = selectedYear === 'all' || anime.year === parseInt(selectedYear);
+    return matchesSearch && matchesGenre && matchesYear;
+  });
+  
   const featuredAnime = displayAnime.slice(0, 3);
-  const popularAnime = displayAnime;
+  const popularAnime = filteredAnime;
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -238,10 +251,59 @@ export default function Index() {
         {currentSection === 'catalog' && (
           <div className="space-y-6">
             <h1 className="text-3xl font-bold">Каталог аниме</h1>
+            
+            <div className="flex flex-wrap gap-4 p-4 bg-card rounded-lg border border-border">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Жанр:</span>
+                <select
+                  value={selectedGenre}
+                  onChange={(e) => setSelectedGenre(e.target.value)}
+                  className="px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">Все жанры</option>
+                  {allGenres.map(genre => (
+                    <option key={genre} value={genre}>{genre}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Год:</span>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">Все годы</option>
+                  {allYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {(selectedGenre !== 'all' || selectedYear !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSelectedGenre('all');
+                    setSelectedYear('all');
+                  }}
+                  className="px-3 py-2 text-sm text-primary hover:text-primary/80 border border-primary rounded-md"
+                >
+                  Сбросить фильтры
+                </button>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {popularAnime.map((anime) => (
-                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
-              ))}
+              {popularAnime.length > 0 ? (
+                popularAnime.map((anime) => (
+                  <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  Не найдено аниме по выбранным фильтрам
+                </div>
+              )}
             </div>
           </div>
         )}
