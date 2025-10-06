@@ -13,6 +13,44 @@ interface AuthModalProps {
 
 export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+
+  const handleEmailAuth = async () => {
+    setError('');
+    setIsLoading(true);
+    
+    try {
+      const action = authMode === 'register' ? 'register' : 'login';
+      const body = authMode === 'register' 
+        ? { action, email, password, username }
+        : { action, email, password };
+      
+      const response = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error || 'Ошибка авторизации');
+        return;
+      }
+      
+      if (data.token) {
+        onSuccess(data.token, data.user);
+      }
+    } catch (error) {
+      setError('Ошибка подключения к серверу');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleYandexAuth = () => {
     const redirectUri = `${window.location.origin}/auth/yandex`;
@@ -76,50 +114,112 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         </div>
 
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground mb-6">
-            Выберите способ входа для доступа ко всем функциям сайта
-          </p>
+          <div className="flex gap-2 p-1 bg-muted rounded-lg mb-4">
+            <button
+              onClick={() => { setAuthMode('login'); setError(''); }}
+              className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
+                authMode === 'login' 
+                  ? 'bg-background text-foreground shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Вход
+            </button>
+            <button
+              onClick={() => { setAuthMode('register'); setError(''); }}
+              className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
+                authMode === 'register' 
+                  ? 'bg-background text-foreground shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Регистрация
+            </button>
+          </div>
 
-          <button
-            onClick={handleYandexAuth}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#FC3F1D] hover:bg-[#FC3F1D]/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-          >
-            <Icon name="Circle" size={20} />
-            Войти через Яндекс
-          </button>
+          {error && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
-          <button
-            onClick={handleVKAuth}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#0077FF] hover:bg-[#0077FF]/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-          >
-            <Icon name="Share2" size={20} />
-            Войти через ВКонтакте
-          </button>
+          <div className="space-y-3">
+            {authMode === 'register' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Имя</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Ваше имя"
+                />
+              </div>
+            )}
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="your@email.com"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Пароль</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Минимум 8 символов"
+              />
+            </div>
+
+            <button
+              onClick={handleEmailAuth}
+              disabled={isLoading || !email || !password || (authMode === 'register' && !username)}
+              className="w-full px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-50"
+            >
+              {isLoading ? 'Загрузка...' : authMode === 'register' ? 'Зарегистрироваться' : 'Войти'}
+            </button>
+          </div>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-card text-muted-foreground">или</span>
+              <span className="px-2 bg-card text-muted-foreground">или войдите через</span>
             </div>
           </div>
 
-          <div id="telegram-login-container" className="flex justify-center">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleVKAuth}
+              disabled={isLoading}
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-[#0077FF] hover:bg-[#0077FF]/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50 text-sm"
+            >
+              <Icon name="Share2" size={18} />
+              ВК
+            </button>
+
             <button
               onClick={handleTelegramAuth}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#0088cc] hover:bg-[#0088cc]/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-[#0088cc] hover:bg-[#0088cc]/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50 text-sm"
             >
-              <Icon name="Send" size={20} />
-              Войти через Telegram
+              <Icon name="Send" size={18} />
+              Telegram
             </button>
           </div>
 
           <p className="text-xs text-center text-muted-foreground mt-4">
-            Входя на сайт, вы соглашаетесь с условиями использования
+            <Icon name="Shield" size={14} className="inline mr-1" />
+            Защищенная авторизация с многоуровневой защитой
           </p>
         </div>
       </div>

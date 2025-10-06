@@ -1,5 +1,5 @@
 '''
-Business: OAuth авторизация через Яндекс, Telegram, VK и управление JWT токенами
+Business: Защищенная авторизация через Email, Яндекс, Telegram, VK с полной системой безопасности
 Args: event - запрос с методом, телом и параметрами; context - контекст выполнения
 Returns: HTTP ответ с токеном или данными пользователя
 '''
@@ -8,15 +8,22 @@ import json
 import os
 import jwt
 import hashlib
+import hmac
+import secrets
 import requests
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import bcrypt
 
 def get_db_connection():
     dsn = os.environ.get('DATABASE_URL')
     return psycopg2.connect(dsn, cursor_factory=RealDictCursor)
+
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_DURATION_MINUTES = 30
+SESSION_DURATION_DAYS = 30
 
 def create_jwt_token(user_id: str, email: str, is_admin: bool) -> str:
     secret = os.environ.get('JWT_SECRET', 'default-secret-key')
@@ -27,6 +34,61 @@ def create_jwt_token(user_id: str, email: str, is_admin: bool) -> str:
         'exp': datetime.utcnow() + timedelta(days=30)
     }
     return jwt.encode(payload, secret, algorithm='HS256')
+
+def create_session_token(conn, user: Dict, event: Dict) -> str:
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    expires_at = datetime.now() + timedelta(days=SESSION_DURATION_DAYS)
+    ip_address = event.get('requestContext', {}).get('identity', {}).get('sourceIp', 'unknown')
+    user_agent = event.get('headers', {}).get('User-Agent', 'unknown')
+    
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO sessions (user_id, token_hash, ip_address, user_agent, expires_at)
+        VALUES (%s, %s, %s, %s, %s)
+    ''', (user['id'], token_hash, ip_address, user_agent, expires_at))
+    conn.commit()
+    
+    return token
+
+def log_security_event(conn, user_id: Optional[str], event_type: str, ip: str, severity: str):
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO security_logs (user_id, event_type, ip_address, severity)
+        VALUES (%s, %s, %s, %s)
+    ''', (user_id, event_type, ip, severity))
+    conn.commit()
+
+def log_login_attempt(conn, email: str, ip: str, user_agent: str, success: bool, reason: str = None):
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO login_attempts (email, ip_address, user_agent, success, failure_reason)
+        VALUES (%s, %s, %s, %s, %s)
+    ''', (email, ip, user_agent, success, reason))
+    conn.commit()
+
+def is_ip_blocked(cur, ip_address: str) -> bool:
+    cur.execute('''
+        SELECT COUNT(*) as attempts FROM login_attempts
+        WHERE ip_address = %s AND success = FALSE 
+        AND attempted_at > NOW() - INTERVAL '15 minutes'
+    ''', (ip_address,))
+    result = cur.fetchone()
+    return result['attempts'] >= 10
+
+def verify_telegram_data(data: Dict) -> bool:
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    if not bot_token:
+        return True
+    
+    check_hash = data.pop('hash', '')
+    data_check_arr = [f"{k}={v}" for k, v in sorted(data.items())]
+    data_check_string = '\n'.join(data_check_arr)
+    
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    
+    return calculated_hash == check_hash
 
 def verify_jwt_token(token: str) -> Dict[str, Any]:
     secret = os.environ.get('JWT_SECRET', 'default-secret-key')
@@ -76,15 +138,18 @@ def get_or_create_user(provider: str, provider_id: str, username: str, email: st
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method = event.get('httpMethod', 'GET')
     
+    cors_headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token, X-User-Id, X-Session-Id',
+        'Access-Control-Max-Age': '86400',
+        'Content-Type': 'application/json'
+    }
+    
     if method == 'OPTIONS':
         return {
             'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
-                'Access-Control-Max-Age': '86400'
-            },
+            'headers': cors_headers,
             'body': '',
             'isBase64Encoded': False
         }
@@ -119,10 +184,180 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
-    # OAuth callbacks
+    # OAuth callbacks и Email авторизация
     if method == 'POST':
+        conn = get_db_connection()
         body_data = json.loads(event.get('body', '{}'))
+        action = body_data.get('action', '')
         provider = body_data.get('provider')
+        ip_address = event.get('requestContext', {}).get('identity', {}).get('sourceIp', 'unknown')
+        user_agent = event.get('headers', {}).get('User-Agent', 'unknown')
+        
+        # Регистрация через Email
+        if action == 'register':
+            email = body_data.get('email', '').lower().strip()
+            password = body_data.get('password', '')
+            username = body_data.get('username', '')
+            
+            if not email or not password or not username:
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Email, пароль и имя обязательны'}),
+                    'isBase64Encoded': False
+                }
+            
+            if len(password) < 8:
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Пароль должен быть минимум 8 символов'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+            if cur.fetchone():
+                log_security_event(conn, None, 'registration_duplicate', ip_address, 'medium')
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Email уже зарегистрирован'}),
+                    'isBase64Encoded': False
+                }
+            
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            user_id = f"email-{secrets.token_urlsafe(16)}"
+            
+            cur.execute('''
+                INSERT INTO users (id, email, password_hash, username, provider, provider_id, email_verified)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, email, username, is_admin, avatar_url
+            ''', (user_id, email, password_hash, username, 'email', user_id, False))
+            
+            user = dict(cur.fetchone())
+            conn.commit()
+            
+            token = create_session_token(conn, user, event)
+            jwt_token = create_jwt_token(user['id'], user['email'], user.get('is_admin', False))
+            log_security_event(conn, user_id, 'registration_success', ip_address, 'low')
+            
+            conn.close()
+            return {
+                'statusCode': 200,
+                'headers': cors_headers,
+                'body': json.dumps({'token': jwt_token, 'session_token': token, 'user': user}),
+                'isBase64Encoded': False
+            }
+        
+        # Вход через Email
+        elif action == 'login':
+            email = body_data.get('email', '').lower().strip()
+            password = body_data.get('password', '')
+            
+            if not email or not password:
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Email и пароль обязательны'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            if is_ip_blocked(cur, ip_address):
+                log_security_event(conn, None, 'blocked_ip_attempt', ip_address, 'high')
+                return {
+                    'statusCode': 429,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Слишком много попыток входа. Попробуйте позже.'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute('''
+                SELECT id, email, password_hash, username, is_admin, is_active, 
+                       failed_login_attempts, locked_until, avatar_url
+                FROM users WHERE email = %s AND provider = %s
+            ''', (email, 'email'))
+            
+            user = cur.fetchone()
+            
+            if not user:
+                log_login_attempt(conn, email, ip_address, user_agent, False, 'user_not_found')
+                conn.close()
+                return {
+                    'statusCode': 401,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Неверный email или пароль'}),
+                    'isBase64Encoded': False
+                }
+            
+            if user['locked_until'] and user['locked_until'] > datetime.now():
+                log_security_event(conn, user['id'], 'locked_account_attempt', ip_address, 'high')
+                conn.close()
+                return {
+                    'statusCode': 403,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': f"Аккаунт заблокирован до {user['locked_until']}"}),
+                    'isBase64Encoded': False
+                }
+            
+            if not user['is_active']:
+                conn.close()
+                return {
+                    'statusCode': 403,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Аккаунт деактивирован'}),
+                    'isBase64Encoded': False
+                }
+            
+            if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                log_login_attempt(conn, email, ip_address, user_agent, False, 'wrong_password')
+                
+                new_attempts = user['failed_login_attempts'] + 1
+                locked_until = None
+                
+                if new_attempts >= MAX_LOGIN_ATTEMPTS:
+                    locked_until = datetime.now() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+                    cur.execute('''
+                        UPDATE users SET failed_login_attempts = %s, locked_until = %s
+                        WHERE id = %s
+                    ''', (new_attempts, locked_until, user['id']))
+                    log_security_event(conn, user['id'], 'account_locked', ip_address, 'critical')
+                else:
+                    cur.execute('''
+                        UPDATE users SET failed_login_attempts = %s WHERE id = %s
+                    ''', (new_attempts, user['id']))
+                
+                conn.commit()
+                conn.close()
+                return {
+                    'statusCode': 401,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Неверный email или пароль'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute('''
+                UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login = CURRENT_TIMESTAMP
+                WHERE id = %s
+            ''', (user['id'],))
+            conn.commit()
+            
+            log_login_attempt(conn, email, ip_address, user_agent, True)
+            log_security_event(conn, user['id'], 'login_success', ip_address, 'low')
+            
+            user_dict = {k: v for k, v in dict(user).items() if k != 'password_hash' and k != 'failed_login_attempts' and k != 'locked_until'}
+            token = create_session_token(conn, user_dict, event)
+            jwt_token = create_jwt_token(user['id'], user['email'], user.get('is_admin', False))
+            
+            conn.close()
+            return {
+                'statusCode': 200,
+                'headers': cors_headers,
+                'body': json.dumps({'token': jwt_token, 'session_token': token, 'user': user_dict}),
+                'isBase64Encoded': False
+            }
         
         if provider == 'yandex':
             code = body_data.get('code')
@@ -171,9 +406,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         
         elif provider == 'telegram':
-            # Telegram Login Widget validation
             telegram_data = body_data.get('telegram_data', {})
-            bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+            
+            if not verify_telegram_data(telegram_data.copy()):
+                log_security_event(conn, None, 'telegram_auth_fake', ip_address, 'critical')
+                conn.close()
+                return {
+                    'statusCode': 401,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Неверные данные авторизации Telegram'}),
+                    'isBase64Encoded': False
+                }
             
             user = get_or_create_user(
                 'telegram',
@@ -184,11 +427,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             )
             
             token = create_jwt_token(user['id'], user.get('email', ''), user.get('is_admin', False))
+            session_token = create_session_token(conn, user, event)
+            log_security_event(conn, user['id'], 'telegram_login', ip_address, 'low')
             
+            conn.close()
             return {
                 'statusCode': 200,
-                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-                'body': json.dumps({'token': token, 'user': user}),
+                'headers': cors_headers,
+                'body': json.dumps({'token': token, 'session_token': session_token, 'user': user}),
                 'isBase64Encoded': False
             }
         
