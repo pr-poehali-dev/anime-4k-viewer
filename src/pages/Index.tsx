@@ -6,10 +6,12 @@ import AdminPanel from '@/components/AdminPanel';
 import AnimeDetails from '@/components/AnimeDetails';
 import AuthModal from '@/components/AuthModal';
 import AdvancedAdminPanel from '@/components/AdvancedAdminPanel';
+import SuperAdminPanel from '@/components/SuperAdminPanel';
 import FeaturedSection from '@/components/sections/FeaturedSection';
 import AnimeGridSection from '@/components/sections/AnimeGridSection';
 import CatalogFilters from '@/components/sections/CatalogFilters';
 import ProfileSection from '@/components/sections/ProfileSection';
+import BannerSection from '@/components/sections/BannerSection';
 import Footer from '@/components/sections/Footer';
 import { MOCK_ANIME } from '@/data/mockAnime';
 
@@ -28,6 +30,7 @@ export default function Index() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('auth_token'));
   const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [showAdvancedAdmin, setShowAdvancedAdmin] = useState(false);
 
   useEffect(() => {
@@ -128,7 +131,7 @@ export default function Index() {
         onSectionChange={setCurrentSection}
         onSearch={handleSearch}
         onAuthClick={() => setShowAuthModal(true)}
-        onAdvancedAdminClick={() => setShowAdvancedAdmin(true)}
+        onAdvancedAdminClick={() => setShowSuperAdmin(true)}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -136,6 +139,7 @@ export default function Index() {
       <main className="container py-8">
         {currentSection === 'home' && (
           <div className="space-y-12">
+            <BannerSection />
             <FeaturedSection 
               featuredAnime={featuredAnime} 
               onWatch={handleWatch} 
@@ -274,6 +278,13 @@ export default function Index() {
       {showAdvancedAdmin && currentUser?.is_admin && authToken && (
         <AdvancedAdminPanel
           onClose={() => setShowAdvancedAdmin(false)}
+          authToken={authToken}
+        />
+      )}
+
+      {showSuperAdmin && currentUser?.is_admin && authToken && (
+        <SuperAdminPanel
+          onClose={() => setShowSuperAdmin(false)}
           authToken={authToken}
         />
       )}

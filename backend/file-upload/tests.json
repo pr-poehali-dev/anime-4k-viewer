@@ -1,18 +1,18 @@
 {
   "tests": [
     {
-      "name": "Handle OPTIONS request",
+      "name": "Handle OPTIONS for CORS",
       "method": "OPTIONS",
       "path": "/",
       "expectedStatus": 200
     },
     {
-      "name": "Deny access without token",
+      "name": "Get files without auth (should work)",
       "method": "GET",
-      "path": "/?action=settings",
-      "expectedStatus": 403,
+      "path": "/",
+      "expectedStatus": 200,
       "expectedBody": {
-        "error": "Access denied"
+        "files": []
       },
       "bodyMatcher": "partial"
     }

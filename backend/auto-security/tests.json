@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "Handle OPTIONS for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Get security status",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "recent_threats": [],
+        "security_level": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
