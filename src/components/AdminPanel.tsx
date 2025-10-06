@@ -55,7 +55,7 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
       if (response.ok) {
         toast({
           title: 'Успех!',
-          description: 'Аніме успішно додано',
+          description: 'Аниме успешно добавлено',
         });
         setFormData({
           title: '',
@@ -71,15 +71,15 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
       } else {
         const error = await response.json();
         toast({
-          title: 'Помилка',
-          description: error.error || 'Не вдалося додати аніме',
+          title: 'Ошибка',
+          description: error.error || 'Не удалось добавить аниме',
           variant: 'destructive'
         });
       }
     } catch (error) {
       toast({
-        title: 'Помилка',
-        description: 'Помилка підключення до сервера',
+        title: 'Ошибка',
+        description: 'Ошибка подключения к серверу',
         variant: 'destructive'
       });
     } finally {
@@ -93,7 +93,7 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <span>⚙️</span>
-            Адмін-панель - Додати аніме
+            Админ-панель - Добавить аниме
           </CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <Icon name="X" size={20} />
@@ -102,7 +102,7 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="title">Назва аніме *</Label>
+              <Label htmlFor="title">Название аниме *</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -113,7 +113,7 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
             </div>
 
             <div>
-              <Label htmlFor="image_url">URL обкладинки *</Label>
+              <Label htmlFor="image_url">URL обложки *</Label>
               <Input
                 id="image_url"
                 value={formData.image_url}
@@ -137,7 +137,7 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="episodes">Кількість епізодів</Label>
+                <Label htmlFor="episodes">Количество эпизодов</Label>
                 <Input
                   id="episodes"
                   type="number"
@@ -162,29 +162,29 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
             </div>
 
             <div>
-              <Label htmlFor="description">Опис</Label>
+              <Label htmlFor="description">Описание</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Опис сюжету аніме..."
+                placeholder="Описание сюжета аниме..."
                 rows={3}
               />
             </div>
 
             <div>
-              <Label htmlFor="genres">Жанри (через кому)</Label>
+              <Label htmlFor="genres">Жанры (через запятую)</Label>
               <Input
                 id="genres"
                 value={formData.genres}
                 onChange={(e) => setFormData({ ...formData, genres: e.target.value })}
-                placeholder="Екшн, Пригоди, Фентезі"
+                placeholder="Экшен, Приключения, Фэнтези"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="release_year">Рік випуску</Label>
+                <Label htmlFor="release_year">Год выпуска</Label>
                 <Input
                   id="release_year"
                   type="number"
@@ -203,19 +203,19 @@ export default function AdminPanel({ onClose, onAnimeAdded }: AdminPanelProps) {
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="ongoing">Виходить</option>
+                  <option value="ongoing">Выходит</option>
                   <option value="completed">Завершено</option>
-                  <option value="upcoming">Анонсовано</option>
+                  <option value="upcoming">Анонсировано</option>
                 </select>
               </div>
             </div>
 
             <div className="flex gap-4 pt-4">
               <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? 'Додавання...' : 'Додати аніме'}
+                {isSubmitting ? 'Добавление...' : 'Добавить аниме'}
               </Button>
               <Button type="button" variant="outline" onClick={onClose}>
-                Скасувати
+                Отменить
               </Button>
             </div>
           </form>

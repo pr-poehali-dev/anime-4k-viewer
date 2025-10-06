@@ -184,7 +184,6 @@ export default function Index() {
         currentSection={currentSection}
         onSectionChange={setCurrentSection}
         onSearch={handleSearch}
-        onAdminClick={() => setShowAdminPanel(true)}
         onAuthClick={() => setShowAuthModal(true)}
         onAdvancedAdminClick={() => setShowAdvancedAdmin(true)}
         currentUser={currentUser}
@@ -447,7 +446,7 @@ export default function Index() {
         />
       )}
 
-      {showAdminPanel && (
+      {showAdminPanel && currentUser?.is_admin && (
         <AdminPanel
           onClose={() => setShowAdminPanel(false)}
           onAnimeAdded={fetchAnime}
@@ -487,7 +486,7 @@ export default function Index() {
               <span className="font-bold text-xl">DokiDokiHub</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 DokiDokiHub. Дивіться аніме в 4K без реклами
+              © 2024 DokiDokiHub. Смотрите аниме в 4K без рекламы
             </p>
             <div className="flex items-center gap-4">
               <span>🌸</span>

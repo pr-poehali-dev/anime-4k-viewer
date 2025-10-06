@@ -81,18 +81,6 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
             />
           </form>
 
-          {onAdminClick && !currentUser?.is_admin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAdminClick}
-              className="hidden sm:flex items-center gap-2"
-            >
-              <Icon name="Settings" size={16} />
-              Адмін
-            </Button>
-          )}
-
           {currentUser?.is_admin && onAdvancedAdminClick && (
             <Button
               variant="outline"
