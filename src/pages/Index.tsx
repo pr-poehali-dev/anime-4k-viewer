@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import AnimeCard from '@/components/AnimeCard';
 import VideoPlayer from '@/components/VideoPlayer';
 import AdminPanel from '@/components/AdminPanel';
+import AnimeDetails from '@/components/AnimeDetails';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 const API_URL = 'https://functions.poehali.dev/74bb9374-2de8-495b-ba12-4a8d593566b5';
@@ -79,6 +80,7 @@ export default function Index() {
   const [searchQuery, setSearchQuery] = useState('');
   const [watchingAnime, setWatchingAnime] = useState<{id: string; title: string; episode: number; episodes: number} | null>(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [selectedAnime, setSelectedAnime] = useState<any | null>(null);
   const [animeList, setAnimeList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -207,7 +209,12 @@ export default function Index() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {popularAnime.map((anime) => (
-                  <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
+                  <AnimeCard 
+                    key={anime.id} 
+                    {...anime} 
+                    onWatch={() => handleWatch(anime)}
+                    onDetails={() => setSelectedAnime(anime)}
+                  />
                 ))}
               </div>
             </section>
@@ -221,7 +228,7 @@ export default function Index() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {popularAnime.filter(a => a.currentEpisode > 0 && a.currentEpisode < a.episodes).map((anime) => (
-                  <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
+                  <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
                 ))}
               </div>
             </section>
@@ -233,7 +240,7 @@ export default function Index() {
             <h1 className="text-3xl font-bold">Каталог аниме</h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.map((anime) => (
-                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
               ))}
             </div>
           </div>
@@ -247,7 +254,7 @@ export default function Index() {
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.slice(0, 3).map((anime) => (
-                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
               ))}
             </div>
           </div>
@@ -261,7 +268,7 @@ export default function Index() {
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.filter(a => a.currentEpisode > 0).map((anime) => (
-                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
               ))}
             </div>
           </div>
@@ -308,7 +315,7 @@ export default function Index() {
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.slice(0, 4).map((anime) => (
-                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} onDetails={() => setSelectedAnime(anime)} />
               ))}
             </div>
           </div>
@@ -330,6 +337,17 @@ export default function Index() {
         <AdminPanel
           onClose={() => setShowAdminPanel(false)}
           onAnimeAdded={fetchAnime}
+        />
+      )}
+
+      {selectedAnime && (
+        <AnimeDetails
+          anime={selectedAnime}
+          onClose={() => setSelectedAnime(null)}
+          onWatch={() => {
+            handleWatch(selectedAnime);
+            setSelectedAnime(null);
+          }}
         />
       )}
 

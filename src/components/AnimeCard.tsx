@@ -12,9 +12,10 @@ interface AnimeCardProps {
   currentEpisode?: number;
   rating?: number;
   onWatch?: () => void;
+  onDetails?: () => void;
 }
 
-export default function AnimeCard({ id, title, image, episodes, currentEpisode = 0, rating, onWatch }: AnimeCardProps) {
+export default function AnimeCard({ id, title, image, episodes, currentEpisode = 0, rating, onWatch, onDetails }: AnimeCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [watchProgress, setWatchProgress] = useState(currentEpisode);
 
@@ -63,23 +64,34 @@ export default function AnimeCard({ id, title, image, episodes, currentEpisode =
           />
         </button>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full transition-transform group-hover:translate-y-0">
+        <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full transition-transform group-hover:translate-y-0 space-y-2">
           <Button onClick={onWatch} className="w-full gradient-red-dark">
             <Icon name="Play" size={18} className="mr-2" />
-            Смотреть
+            Дивитися
           </Button>
+          {onDetails && (
+            <Button onClick={onDetails} variant="secondary" className="w-full">
+              <Icon name="Info" size={18} className="mr-2" />
+              Детальніше
+            </Button>
+          )}
         </div>
       </div>
 
       <CardContent className="p-4">
-        <h3 className="font-semibold text-sm mb-2 line-clamp-2">{title}</h3>
+        <h3 
+          className="font-semibold text-sm mb-2 line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+          onClick={onDetails}
+        >
+          {title}
+        </h3>
         
         <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-          <span>Эпизод {watchProgress}/{episodes}</span>
+          <span>Епізод {watchProgress}/{episodes}</span>
           {rating && (
             <div className="flex items-center gap-1">
               <Icon name="Star" size={14} className="fill-accent text-accent" />
-              <span>{rating}</span>
+              <span>{rating.toFixed(1)}</span>
             </div>
           )}
         </div>
