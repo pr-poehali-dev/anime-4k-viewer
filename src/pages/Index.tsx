@@ -7,6 +7,8 @@ import AnimeDetails from '@/components/AnimeDetails';
 import AuthModal from '@/components/AuthModal';
 import AdvancedAdminPanel from '@/components/AdvancedAdminPanel';
 import SuperAdminPanel from '@/components/SuperAdminPanel';
+import UserProfile from '@/components/UserProfile';
+import Chat from '@/components/Chat';
 import FeaturedSection from '@/components/sections/FeaturedSection';
 import AnimeGridSection from '@/components/sections/AnimeGridSection';
 import CatalogFilters from '@/components/sections/CatalogFilters';
@@ -32,6 +34,8 @@ export default function Index() {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [showAdvancedAdmin, setShowAdvancedAdmin] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     fetchAnime();
@@ -128,10 +132,14 @@ export default function Index() {
     <div className="min-h-screen bg-background text-foreground">
       <Header
         currentSection={currentSection}
-        onSectionChange={setCurrentSection}
+        onSectionChange={(section) => {
+          setCurrentSection(section);
+          if (section === 'profile') setShowProfile(true);
+        }}
         onSearch={handleSearch}
         onAuthClick={() => setShowAuthModal(true)}
         onAdvancedAdminClick={() => setShowSuperAdmin(true)}
+        onChatClick={() => setShowChat(true)}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -286,6 +294,26 @@ export default function Index() {
         <SuperAdminPanel
           onClose={() => setShowSuperAdmin(false)}
           authToken={authToken}
+        />
+      )}
+
+      {showProfile && currentUser && authToken && (
+        <UserProfile
+          currentUser={currentUser}
+          authToken={authToken}
+          onClose={() => setShowProfile(false)}
+          onUserUpdate={(user) => {
+            setCurrentUser(user);
+            localStorage.setItem('current_user', JSON.stringify(user));
+          }}
+        />
+      )}
+
+      {showChat && currentUser && authToken && (
+        <Chat
+          currentUser={currentUser}
+          authToken={authToken}
+          onClose={() => setShowChat(false)}
         />
       )}
 

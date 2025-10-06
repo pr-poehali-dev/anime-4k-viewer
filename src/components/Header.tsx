@@ -11,11 +11,12 @@ interface HeaderProps {
   onAdminClick?: () => void;
   onAuthClick?: () => void;
   onAdvancedAdminClick?: () => void;
+  onChatClick?: () => void;
   currentUser?: any | null;
   onLogout?: () => void;
 }
 
-export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick, onAuthClick, onAdvancedAdminClick, currentUser, onLogout }: HeaderProps) {
+export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick, onAuthClick, onAdvancedAdminClick, onChatClick, currentUser, onLogout }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
@@ -81,6 +82,18 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
             />
           </form>
 
+          {currentUser && onChatClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onChatClick}
+              className="hidden sm:flex items-center gap-2 relative"
+            >
+              <Icon name="MessageCircle" size={16} />
+              Чат
+            </Button>
+          )}
+
           {currentUser?.is_admin && onAdvancedAdminClick && (
             <Button
               variant="outline"
@@ -95,9 +108,9 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
 
           {currentUser ? (
             <div className="flex items-center gap-2">
-              <Avatar className="cursor-pointer" onClick={() => onSectionChange('profile')}>
+              <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary transition-all" onClick={() => onSectionChange('profile')}>
                 <AvatarImage src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`} />
-                <AvatarFallback>{currentUser.username[0]?.toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="bg-gradient-to-br from-pink-500 to-purple-500 text-white">{currentUser.username[0]?.toUpperCase()}</AvatarFallback>
               </Avatar>
               <Button variant="ghost" size="sm" onClick={onLogout}>
                 <Icon name="LogOut" size={16} />

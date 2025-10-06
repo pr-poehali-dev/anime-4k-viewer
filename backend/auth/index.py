@@ -1,7 +1,7 @@
 '''
-Business: Защищенная авторизация через Email, Яндекс, Telegram, VK с полной системой безопасности
+Business: Защищенная авторизация через Email, Яндекс, Telegram, VK с полной системой безопасности + управление профилем пользователя
 Args: event - запрос с методом, телом и параметрами; context - контекст выполнения
-Returns: HTTP ответ с токеном или данными пользователя
+Returns: HTTP ответ с токеном, данными пользователя или обновленным профилем
 '''
 
 import json
@@ -720,6 +720,96 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({'token': token, 'user': user}),
                     'isBase64Encoded': False
                 }
+        
+        # Обновление профиля пользователя
+        if action == 'update_profile':
+            username = body_data.get('username', '').strip()
+            bio = body_data.get('bio', '').strip()
+            avatar_url = body_data.get('avatar_url', '').strip()
+            
+            user_id = verify_jwt_token(event.get('headers', {}).get('x-auth-token', '')).get('user_id')
+            if not user_id:
+                conn.close()
+                return {
+                    'statusCode': 401,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Unauthorized'}),
+                    'isBase64Encoded': False
+                }
+            
+            if not username:
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Имя пользователя обязательно'}),
+                    'isBase64Encoded': False
+                }
+            
+            if len(username) > 50:
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Имя пользователя слишком длинное (макс. 50 символов)'}),
+                    'isBase64Encoded': False
+                }
+            
+            if len(bio) > 500:
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Описание слишком длинное (макс. 500 символов)'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            update_fields = ['username = %s', 'bio = %s']
+            update_values = [username, bio]
+            
+            if avatar_url:
+                update_fields.append('avatar_url = %s')
+                update_values.append(avatar_url)
+            
+            update_values.append(user_id)
+            
+            cur.execute(f'''
+                UPDATE users
+                SET {', '.join(update_fields)}
+                WHERE id = %s
+                RETURNING id, email, username, avatar_url, bio, provider,
+                          favorites_count, watch_count, ratings_count,
+                          created_at, last_login, is_admin
+            ''', tuple(update_values))
+            
+            updated_user = cur.fetchone()
+            
+            if not updated_user:
+                conn.close()
+                return {
+                    'statusCode': 404,
+                    'headers': cors_headers,
+                    'body': json.dumps({'error': 'Пользователь не найден'}),
+                    'isBase64Encoded': False
+                }
+            
+            conn.commit()
+            
+            user_dict = dict(updated_user)
+            if user_dict.get('created_at'):
+                user_dict['created_at'] = user_dict['created_at'].isoformat()
+            if user_dict.get('last_login'):
+                user_dict['last_login'] = user_dict['last_login'].isoformat()
+            
+            conn.close()
+            return {
+                'statusCode': 200,
+                'headers': cors_headers,
+                'body': json.dumps({'user': user_dict, 'success': True}),
+                'isBase64Encoded': False
+            }
     
     return {
         'statusCode': 400,

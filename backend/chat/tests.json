@@ -1,19 +1,18 @@
 {
   "tests": [
     {
-      "name": "Handle OPTIONS for CORS",
+      "name": "Handle OPTIONS request for CORS",
       "method": "OPTIONS",
       "path": "/",
       "expectedStatus": 200
     },
     {
-      "name": "Get security status",
+      "name": "Get messages without auth token",
       "method": "GET",
-      "path": "/",
-      "expectedStatus": 200,
+      "path": "/?action=get_messages",
+      "expectedStatus": 401,
       "expectedBody": {
-        "recent_threats": [],
-        "security_level": "string"
+        "error": "string"
       },
       "bodyMatcher": "partial"
     }
