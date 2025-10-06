@@ -8,9 +8,10 @@ interface HeaderProps {
   currentSection: string;
   onSectionChange: (section: string) => void;
   onSearch: (query: string) => void;
+  onAdminClick?: () => void;
 }
 
-export default function Header({ currentSection, onSectionChange, onSearch }: HeaderProps) {
+export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -25,8 +26,8 @@ export default function Header({ currentSection, onSectionChange, onSearch }: He
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onSectionChange('home')}>
-            <span className="text-2xl">⛩️</span>
-            <span className="font-bold text-xl gradient-red-dark bg-clip-text text-transparent">ANIME 4K</span>
+            <span className="text-2xl">💖</span>
+            <span className="font-bold text-xl gradient-red-dark bg-clip-text text-transparent">DokiDokiHub</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-6">
@@ -76,6 +77,18 @@ export default function Header({ currentSection, onSectionChange, onSearch }: He
               className="pl-10 w-64 bg-muted/50"
             />
           </form>
+
+          {onAdminClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAdminClick}
+              className="hidden sm:flex items-center gap-2"
+            >
+              <Icon name="Settings" size={16} />
+              Адмін
+            </Button>
+          )}
 
           {isLoggedIn ? (
             <Avatar className="cursor-pointer" onClick={() => onSectionChange('profile')}>

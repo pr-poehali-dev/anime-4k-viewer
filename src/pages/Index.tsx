@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import AnimeCard from '@/components/AnimeCard';
 import VideoPlayer from '@/components/VideoPlayer';
+import AdminPanel from '@/components/AdminPanel';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
+const API_URL = 'https://functions.poehali.dev/74bb9374-2de8-495b-ba12-4a8d593566b5';
 
 const MOCK_ANIME = [
   {
@@ -75,9 +78,30 @@ export default function Index() {
   const [currentSection, setCurrentSection] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [watchingAnime, setWatchingAnime] = useState<{id: string; title: string; episode: number; episodes: number} | null>(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [animeList, setAnimeList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const featuredAnime = MOCK_ANIME.slice(0, 3);
-  const popularAnime = MOCK_ANIME;
+  useEffect(() => {
+    fetchAnime();
+  }, []);
+
+  const fetchAnime = async () => {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+      setAnimeList(data.anime || []);
+    } catch (error) {
+      console.error('Failed to fetch anime:', error);
+      setAnimeList(MOCK_ANIME);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const displayAnime = animeList.length > 0 ? animeList : MOCK_ANIME;
+  const featuredAnime = displayAnime.slice(0, 3);
+  const popularAnime = displayAnime;
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -106,6 +130,7 @@ export default function Index() {
         currentSection={currentSection}
         onSectionChange={setCurrentSection}
         onSearch={handleSearch}
+        onAdminClick={() => setShowAdminPanel(true)}
       />
 
       <main className="container py-8">
@@ -301,20 +326,27 @@ export default function Index() {
         />
       )}
 
+      {showAdminPanel && (
+        <AdminPanel
+          onClose={() => setShowAdminPanel(false)}
+          onAnimeAdded={fetchAnime}
+        />
+      )}
+
       <footer className="border-t border-border mt-16">
         <div className="container py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">⛩️</span>
-              <span className="font-bold text-xl">ANIME 4K</span>
+              <span className="text-2xl">💖</span>
+              <span className="font-bold text-xl">DokiDokiHub</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 Anime 4K. Смотрите аниме в 4K без рекламы
+              © 2024 DokiDokiHub. Дивіться аніме в 4K без реклами
             </p>
             <div className="flex items-center gap-4">
               <span>🌸</span>
               <span>🎌</span>
-              <span>🗾</span>
+              <span>💕</span>
             </div>
           </div>
         </div>
