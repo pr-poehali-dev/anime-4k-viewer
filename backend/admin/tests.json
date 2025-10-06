@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Handle OPTIONS request",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Deny access without token",
+      "method": "GET",
+      "path": "/?action=settings",
+      "expectedStatus": 403,
+      "expectedBody": {
+        "error": "Access denied"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

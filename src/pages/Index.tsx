@@ -4,6 +4,8 @@ import AnimeCard from '@/components/AnimeCard';
 import VideoPlayer from '@/components/VideoPlayer';
 import AdminPanel from '@/components/AdminPanel';
 import AnimeDetails from '@/components/AnimeDetails';
+import AuthModal from '@/components/AuthModal';
+import AdvancedAdminPanel from '@/components/AdvancedAdminPanel';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 const API_URL = 'https://functions.poehali.dev/74bb9374-2de8-495b-ba12-4a8d593566b5';
@@ -85,10 +87,34 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('auth_token'));
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [showAdvancedAdmin, setShowAdvancedAdmin] = useState(false);
 
   useEffect(() => {
     fetchAnime();
+    if (authToken) {
+      verifyToken();
+    }
   }, []);
+
+  const verifyToken = async () => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/268f16de-69c3-43b0-a1ce-341db3868ec2?action=verify', {
+        headers: { 'X-Auth-Token': authToken || '' }
+      });
+      const data = await response.json();
+      if (data.user_id) {
+        setCurrentUser(data);
+      } else {
+        localStorage.removeItem('auth_token');
+        setAuthToken(null);
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+    }
+  };
 
   const fetchAnime = async () => {
     try {
@@ -101,6 +127,19 @@ export default function Index() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAuthSuccess = (token: string, user: any) => {
+    setAuthToken(token);
+    setCurrentUser(user);
+    localStorage.setItem('auth_token', token);
+    setShowAuthModal(false);
+  };
+
+  const handleLogout = () => {
+    setAuthToken(null);
+    setCurrentUser(null);
+    localStorage.removeItem('auth_token');
   };
 
   const displayAnime = animeList.length > 0 ? animeList : MOCK_ANIME;
@@ -146,6 +185,10 @@ export default function Index() {
         onSectionChange={setCurrentSection}
         onSearch={handleSearch}
         onAdminClick={() => setShowAdminPanel(true)}
+        onAuthClick={() => setShowAuthModal(true)}
+        onAdvancedAdminClick={() => setShowAdvancedAdmin(true)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       <main className="container py-8">
@@ -336,7 +379,7 @@ export default function Index() {
           </div>
         )}
 
-        {currentSection === 'profile' && (
+        {currentSection === 'profile' && currentUser && (
           <div className="max-w-2xl mx-auto space-y-6">
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <span>👤</span>
@@ -344,12 +387,21 @@ export default function Index() {
             </h1>
             <div className="bg-card p-8 rounded-lg border border-border">
               <div className="flex items-center gap-6 mb-6">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-4xl">
-                  🎭
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-4xl">
+                  {currentUser.avatar_url ? (
+                    <img src={currentUser.avatar_url} alt={currentUser.username} className="w-full h-full object-cover" />
+                  ) : (
+                    currentUser.username[0]?.toUpperCase()
+                  )}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">Пользователь</h2>
-                  <p className="text-muted-foreground">user@anime4k.com</p>
+                  <h2 className="text-2xl font-bold">{currentUser.username}</h2>
+                  <p className="text-muted-foreground">{currentUser.email || `Авторизация через ${currentUser.provider}`}</p>
+                  {currentUser.is_admin && (
+                    <span className="inline-block mt-2 px-3 py-1 bg-primary/20 text-primary text-sm rounded-full">
+                      Администратор
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="space-y-4">
@@ -410,6 +462,20 @@ export default function Index() {
             handleWatch(selectedAnime);
             setSelectedAnime(null);
           }}
+        />
+      )}
+
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
+
+      {showAdvancedAdmin && currentUser?.is_admin && authToken && (
+        <AdvancedAdminPanel
+          onClose={() => setShowAdvancedAdmin(false)}
+          authToken={authToken}
         />
       )}
 

@@ -9,11 +9,14 @@ interface HeaderProps {
   onSectionChange: (section: string) => void;
   onSearch: (query: string) => void;
   onAdminClick?: () => void;
+  onAuthClick?: () => void;
+  onAdvancedAdminClick?: () => void;
+  currentUser?: any | null;
+  onLogout?: () => void;
 }
 
-export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick }: HeaderProps) {
+export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick, onAuthClick, onAdvancedAdminClick, currentUser, onLogout }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +81,7 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
             />
           </form>
 
-          {onAdminClick && (
+          {onAdminClick && !currentUser?.is_admin && (
             <Button
               variant="outline"
               size="sm"
@@ -90,13 +93,30 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
             </Button>
           )}
 
-          {isLoggedIn ? (
-            <Avatar className="cursor-pointer" onClick={() => onSectionChange('profile')}>
-              <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
+          {currentUser?.is_admin && onAdvancedAdminClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAdvancedAdminClick}
+              className="hidden sm:flex items-center gap-2"
+            >
+              <Icon name="Shield" size={16} />
+              Админ-панель
+            </Button>
+          )}
+
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <Avatar className="cursor-pointer" onClick={() => onSectionChange('profile')}>
+                <AvatarImage src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`} />
+                <AvatarFallback>{currentUser.username[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <Button variant="ghost" size="sm" onClick={onLogout}>
+                <Icon name="LogOut" size={16} />
+              </Button>
+            </div>
           ) : (
-            <Button onClick={() => setIsLoggedIn(true)} className="gradient-red-dark">
+            <Button onClick={onAuthClick} className="gradient-red-dark">
               Войти
             </Button>
           )}
