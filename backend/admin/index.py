@@ -105,6 +105,20 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         user_id = body_data.get('user_id')
         role = body_data.get('role', 'admin')
         
+        # Check admin limit (max 3 admins)
+        cur.execute("SELECT COUNT(*) as count FROM admins")
+        admin_count = cur.fetchone()['count']
+        
+        if admin_count >= 3:
+            cur.close()
+            conn.close()
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'Максимум 3 администратора'}),
+                'isBase64Encoded': False
+            }
+        
         cur.execute("UPDATE users SET is_admin = TRUE WHERE id = %s", (user_id,))
         cur.execute("""
             INSERT INTO admins (user_id, role)

@@ -100,7 +100,7 @@ export default function AdvancedAdminPanel({ onClose, authToken }: AdvancedAdmin
 
   const makeAdmin = async (userId: string) => {
     try {
-      await fetch(`${ADMIN_URL}?action=add-admin`, {
+      const response = await fetch(`${ADMIN_URL}?action=add-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,13 @@ export default function AdvancedAdminPanel({ onClose, authToken }: AdvancedAdmin
         },
         body: JSON.stringify({ user_id: userId, role: 'admin' })
       });
-      loadUsers();
+      const data = await response.json();
+      
+      if (data.error) {
+        alert(data.error);
+      } else {
+        loadUsers();
+      }
     } catch (error) {
       console.error('Failed to make admin:', error);
     }
@@ -242,6 +248,11 @@ export default function AdvancedAdminPanel({ onClose, authToken }: AdvancedAdmin
             </div>
           ) : activeTab === 'users' ? (
             <div className="space-y-4">
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 mb-4">
+                <p className="text-sm">
+                  <strong>Лимит администраторов:</strong> {users.filter(u => u.is_admin).length} / 3
+                </p>
+              </div>
               {users.map((user) => (
                 <div
                   key={user.id}
