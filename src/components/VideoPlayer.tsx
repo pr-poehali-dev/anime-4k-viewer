@@ -56,6 +56,13 @@ export default function VideoPlayer({
   }, []);
 
   useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+    }
+  }, [episode]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       if (videoRef.current && isPlaying) {
         const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
