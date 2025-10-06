@@ -516,6 +516,77 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
+        # Авторизация через VK или Telegram (новый формат)
+        if action == 'social_auth':
+            provider = body_data.get('provider')
+            
+            if provider == 'vk':
+                vk_data = body_data.get('vk_data', {})
+                
+                if not vk_data or 'user' not in vk_data:
+                    log_security_event(conn, None, 'vk_auth_invalid', ip_address, 'medium')
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': cors_headers,
+                        'body': json.dumps({'error': 'Неверные данные авторизации VK'}),
+                        'isBase64Encoded': False
+                    }
+                
+                vk_user = vk_data.get('user', {})
+                vk_id = str(vk_user.get('id', ''))
+                first_name = vk_user.get('first_name', '')
+                last_name = vk_user.get('last_name', '')
+                username = f"{first_name} {last_name}".strip() or 'VK User'
+                avatar = vk_user.get('avatar', '')
+                
+                user = get_or_create_user('vk', vk_id, username, None, avatar)
+                
+                token = create_jwt_token(user['id'], user.get('email', ''), user.get('is_admin', False))
+                session_token = create_session_token(conn, user, event)
+                log_security_event(conn, user['id'], 'vk_login', ip_address, 'low')
+                
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': cors_headers,
+                    'body': json.dumps({'token': token, 'session_token': session_token, 'user': user}),
+                    'isBase64Encoded': False
+                }
+            
+            elif provider == 'telegram':
+                telegram_data = body_data.get('telegram_data', {})
+                
+                if not telegram_data or 'id' not in telegram_data:
+                    log_security_event(conn, None, 'telegram_auth_invalid', ip_address, 'medium')
+                    conn.close()
+                    return {
+                        'statusCode': 400,
+                        'headers': cors_headers,
+                        'body': json.dumps({'error': 'Неверные данные авторизации Telegram'}),
+                        'isBase64Encoded': False
+                    }
+                
+                user = get_or_create_user(
+                    'telegram',
+                    str(telegram_data.get('id')),
+                    telegram_data.get('username', telegram_data.get('first_name', 'User')),
+                    None,
+                    telegram_data.get('photo_url')
+                )
+                
+                token = create_jwt_token(user['id'], user.get('email', ''), user.get('is_admin', False))
+                session_token = create_session_token(conn, user, event)
+                log_security_event(conn, user['id'], 'telegram_login', ip_address, 'low')
+                
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': cors_headers,
+                    'body': json.dumps({'token': token, 'session_token': session_token, 'user': user}),
+                    'isBase64Encoded': False
+                }
+        
         if provider == 'yandex':
             code = body_data.get('code')
             client_id = os.environ.get('YANDEX_CLIENT_ID')
