@@ -11,9 +11,10 @@ interface AnimeCardProps {
   episodes: number;
   currentEpisode?: number;
   rating?: number;
+  onWatch?: () => void;
 }
 
-export default function AnimeCard({ id, title, image, episodes, currentEpisode = 0, rating }: AnimeCardProps) {
+export default function AnimeCard({ id, title, image, episodes, currentEpisode = 0, rating, onWatch }: AnimeCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [watchProgress, setWatchProgress] = useState(currentEpisode);
 
@@ -63,7 +64,7 @@ export default function AnimeCard({ id, title, image, episodes, currentEpisode =
         </button>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full transition-transform group-hover:translate-y-0">
-          <Button className="w-full gradient-red-dark">
+          <Button onClick={onWatch} className="w-full gradient-red-dark">
             <Icon name="Play" size={18} className="mr-2" />
             Смотреть
           </Button>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Header from '@/components/Header';
 import AnimeCard from '@/components/AnimeCard';
+import VideoPlayer from '@/components/VideoPlayer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 const MOCK_ANIME = [
@@ -73,12 +74,30 @@ const MOCK_ANIME = [
 export default function Index() {
   const [currentSection, setCurrentSection] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
+  const [watchingAnime, setWatchingAnime] = useState<{id: string; title: string; episode: number; episodes: number} | null>(null);
 
   const featuredAnime = MOCK_ANIME.slice(0, 3);
   const popularAnime = MOCK_ANIME;
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+  };
+
+  const handleWatch = (anime: typeof MOCK_ANIME[0]) => {
+    const savedProgress = localStorage.getItem(`progress-${anime.id}`);
+    const startEpisode = savedProgress ? parseInt(savedProgress) : anime.currentEpisode || 1;
+    setWatchingAnime({
+      id: anime.id,
+      title: anime.title,
+      episode: startEpisode,
+      episodes: anime.episodes
+    });
+  };
+
+  const handleEpisodeChange = (episode: number) => {
+    if (watchingAnime) {
+      setWatchingAnime({ ...watchingAnime, episode });
+    }
   };
 
   return (
@@ -127,7 +146,10 @@ export default function Index() {
                               Без рекламы, с автоматическим сохранением прогресса.
                             </p>
                             <div className="flex gap-4">
-                              <button className="px-8 py-3 bg-primary hover:bg-primary/90 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2">
+                              <button 
+                                onClick={() => handleWatch(anime)}
+                                className="px-8 py-3 bg-primary hover:bg-primary/90 rounded-lg font-semibold transition-all hover:scale-105 flex items-center gap-2"
+                              >
                                 ▶️ Смотреть сейчас
                               </button>
                               <button className="px-8 py-3 bg-white/10 hover:bg-white/20 rounded-lg font-semibold transition-all">
@@ -160,7 +182,7 @@ export default function Index() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {popularAnime.map((anime) => (
-                  <AnimeCard key={anime.id} {...anime} />
+                  <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
                 ))}
               </div>
             </section>
@@ -174,7 +196,7 @@ export default function Index() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {popularAnime.filter(a => a.currentEpisode > 0 && a.currentEpisode < a.episodes).map((anime) => (
-                  <AnimeCard key={anime.id} {...anime} />
+                  <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
                 ))}
               </div>
             </section>
@@ -186,7 +208,7 @@ export default function Index() {
             <h1 className="text-3xl font-bold">Каталог аниме</h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.map((anime) => (
-                <AnimeCard key={anime.id} {...anime} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
               ))}
             </div>
           </div>
@@ -200,7 +222,7 @@ export default function Index() {
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.slice(0, 3).map((anime) => (
-                <AnimeCard key={anime.id} {...anime} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
               ))}
             </div>
           </div>
@@ -214,7 +236,7 @@ export default function Index() {
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.filter(a => a.currentEpisode > 0).map((anime) => (
-                <AnimeCard key={anime.id} {...anime} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
               ))}
             </div>
           </div>
@@ -261,12 +283,23 @@ export default function Index() {
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {popularAnime.slice(0, 4).map((anime) => (
-                <AnimeCard key={anime.id} {...anime} />
+                <AnimeCard key={anime.id} {...anime} onWatch={() => handleWatch(anime)} />
               ))}
             </div>
           </div>
         )}
       </main>
+
+      {watchingAnime && (
+        <VideoPlayer
+          animeId={watchingAnime.id}
+          animeTitle={watchingAnime.title}
+          episode={watchingAnime.episode}
+          totalEpisodes={watchingAnime.episodes}
+          onEpisodeChange={handleEpisodeChange}
+          onClose={() => setWatchingAnime(null)}
+        />
+      )}
 
       <footer className="border-t border-border mt-16">
         <div className="container py-8">
