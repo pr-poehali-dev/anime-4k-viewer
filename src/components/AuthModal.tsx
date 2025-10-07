@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import VKAuth from '@/components/VKAuth';
-import TelegramAuth from '@/components/TelegramAuth';
 
 const AUTH_URL = 'https://functions.poehali.dev/268f16de-69c3-43b0-a1ce-341db3868ec2';
-const TELEGRAM_BOT_NAME = 'Shiky';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -84,31 +82,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     }
   };
 
-  const handleTelegramAuth = async (telegramUser: any) => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const response = await fetch(AUTH_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'social_auth', provider: 'telegram', telegram_data: telegramUser })
-      });
-      const data = await response.json();
-      
-      if (!response.ok) {
-        setError(data.error || 'Ошибка авторизации через Telegram');
-        return;
-      }
-      
-      if (data.token) {
-        onSuccess(data.token, data.user);
-      }
-    } catch (error) {
-      setError('Ошибка подключения к серверу');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -273,15 +247,6 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             <VKAuth 
               onSuccess={handleVKAuth}
               onError={(error) => setError('Ошибка авторизации VK')}
-            />
-            
-            <div className="flex items-center gap-2 mt-4">
-              <Icon name="Send" size={16} className="text-[#0088cc]" />
-              <span className="text-sm font-medium">Войти через Telegram</span>
-            </div>
-            <TelegramAuth 
-              botUsername={TELEGRAM_BOT_NAME}
-              onAuth={handleTelegramAuth}
             />
           </div>
 

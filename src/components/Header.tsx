@@ -30,7 +30,6 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onSectionChange('home')}>
-            <span className="text-2xl">💖</span>
             <span className="font-bold text-xl gradient-red-dark bg-clip-text text-transparent">DokiDokiHub</span>
           </div>
 
