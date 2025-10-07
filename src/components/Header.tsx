@@ -12,11 +12,12 @@ interface HeaderProps {
   onAuthClick?: () => void;
   onAdvancedAdminClick?: () => void;
   onChatClick?: () => void;
+  onAnimeManagerClick?: () => void;
   currentUser?: any | null;
   onLogout?: () => void;
 }
 
-export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick, onAuthClick, onAdvancedAdminClick, onChatClick, currentUser, onLogout }: HeaderProps) {
+export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick, onAuthClick, onAdvancedAdminClick, onChatClick, onAnimeManagerClick, currentUser, onLogout }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (e: React.FormEvent) => {
@@ -102,6 +103,18 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
             >
               <Icon name="Shield" size={16} />
               Админ-панель
+            </Button>
+          )}
+
+          {currentUser?.is_admin && onAnimeManagerClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAnimeManagerClick}
+              className="hidden sm:flex items-center gap-2"
+            >
+              <Icon name="Film" size={16} />
+              Управление аниме
             </Button>
           )}
 

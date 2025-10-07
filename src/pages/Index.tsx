@@ -9,6 +9,7 @@ import AdvancedAdminPanel from '@/components/AdvancedAdminPanel';
 import SuperAdminPanel from '@/components/SuperAdminPanel';
 import UserProfile from '@/components/UserProfile';
 import Chat from '@/components/Chat';
+import AnimeManager from '@/components/AnimeManager';
 import FeaturedSection from '@/components/sections/FeaturedSection';
 import AnimeGridSection from '@/components/sections/AnimeGridSection';
 import CatalogFilters from '@/components/sections/CatalogFilters';
@@ -36,6 +37,7 @@ export default function Index() {
   const [showAdvancedAdmin, setShowAdvancedAdmin] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showAnimeManager, setShowAnimeManager] = useState(false);
 
   useEffect(() => {
     fetchAnime();
@@ -140,6 +142,7 @@ export default function Index() {
         onAuthClick={() => setShowAuthModal(true)}
         onAdvancedAdminClick={() => setShowSuperAdmin(true)}
         onChatClick={() => setShowChat(true)}
+        onAnimeManagerClick={() => setShowAnimeManager(true)}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -314,6 +317,13 @@ export default function Index() {
           currentUser={currentUser}
           authToken={authToken}
           onClose={() => setShowChat(false)}
+        />
+      )}
+
+      {showAnimeManager && currentUser?.is_admin && authToken && (
+        <AnimeManager
+          authToken={authToken}
+          onClose={() => setShowAnimeManager(false)}
         />
       )}
 

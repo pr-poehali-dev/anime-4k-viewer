@@ -31,7 +31,10 @@ export default function VideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [quality, setQuality] = useState('4K');
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  const qualities = ['4K', '1080p', '720p', '480p'];
 
   useEffect(() => {
     const video = videoRef.current;
@@ -174,9 +177,33 @@ export default function VideoPlayer({
               <p className="text-muted-foreground">Эпизод {episode} из {totalEpisodes}</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary/20 backdrop-blur rounded-full">
-                <span className="text-accent">⚡</span>
-                <span className="text-sm font-semibold">{quality}</span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowQualityMenu(!showQualityMenu)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary/20 backdrop-blur rounded-full hover:bg-primary/30 transition-colors"
+                >
+                  <span className="text-accent">⚡</span>
+                  <span className="text-sm font-semibold">{quality}</span>
+                  <Icon name="ChevronDown" size={16} />
+                </button>
+                {showQualityMenu && (
+                  <div className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur rounded-lg border border-white/10 overflow-hidden min-w-[120px]">
+                    {qualities.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => {
+                          setQuality(q);
+                          setShowQualityMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left hover:bg-white/10 transition-colors ${
+                          quality === q ? 'bg-primary/20 text-primary' : ''
+                        }`}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button
                 variant="ghost"
