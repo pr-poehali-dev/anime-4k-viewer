@@ -131,7 +131,11 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground gradient-mesh wave-pattern">
+      <div className="fixed top-20 right-10 text-4xl opacity-20 animate-pulse sakura-float">🌸</div>
+      <div className="fixed top-40 left-20 text-3xl opacity-15 animate-pulse sakura-float" style={{animationDelay: '2s'}}>🌸</div>
+      <div className="fixed bottom-40 right-32 text-5xl opacity-10 animate-pulse sakura-float" style={{animationDelay: '4s'}}>🌸</div>
+      
       <Header
         currentSection={currentSection}
         onSectionChange={(section) => {

@@ -44,14 +44,15 @@ export default function AnimeCard({ id, title, image, episodes, currentEpisode =
   const progressPercentage = (watchProgress / episodes) * 100;
 
   return (
-    <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur transition-all hover:scale-105 hover:border-primary/50">
+    <Card className="group overflow-hidden border-gradient-japan bg-card/80 backdrop-blur transition-all hover:scale-105 hover:shadow-2xl hover:shadow-primary/20">
       <div className="relative aspect-[2/3] overflow-hidden">
         <img
           src={image}
           alt={title}
           className="h-full w-full object-cover transition-transform group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="absolute inset-0 gradient-mesh opacity-30"></div>
         
         <button
           onClick={toggleFavorite}
@@ -65,14 +66,14 @@ export default function AnimeCard({ id, title, image, episodes, currentEpisode =
         </button>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-full transition-transform group-hover:translate-y-0 space-y-2">
-          <Button onClick={onWatch} className="w-full gradient-red-dark">
+          <Button onClick={onWatch} className="w-full gradient-sakura shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all">
             <Icon name="Play" size={18} className="mr-2" />
-            Дивитися
+            Смотреть
           </Button>
           {onDetails && (
-            <Button onClick={onDetails} variant="secondary" className="w-full">
+            <Button onClick={onDetails} className="w-full bg-card/90 border border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all backdrop-blur">
               <Icon name="Info" size={18} className="mr-2" />
-              Детальніше
+              Подробнее
             </Button>
           )}
         </div>

@@ -28,45 +28,52 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 wave-pattern">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onSectionChange('home')}>
-            <span className="font-bold text-xl gradient-red-dark bg-clip-text text-transparent">DokiDokiHub</span>
+          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => onSectionChange('home')}>
+            <span className="font-bold text-2xl gradient-japan bg-clip-text text-transparent text-shadow-crimson japanese-text transition-all group-hover:scale-105">
+              DokiDokiHub
+            </span>
+            <span className="text-xl">🌸</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-6">
             <button
               onClick={() => onSectionChange('home')}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-all hover:text-primary japanese-text relative group ${
                 currentSection === 'home' ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
               Главная
+              {currentSection === 'home' && <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-japan rounded-full"></span>}
             </button>
             <button
               onClick={() => onSectionChange('catalog')}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-all hover:text-primary japanese-text relative group ${
                 currentSection === 'catalog' ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
               Каталог
+              {currentSection === 'catalog' && <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-japan rounded-full"></span>}
             </button>
             <button
               onClick={() => onSectionChange('favorites')}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-all hover:text-primary japanese-text relative group ${
                 currentSection === 'favorites' ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
               Избранное
+              {currentSection === 'favorites' && <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-japan rounded-full"></span>}
             </button>
             <button
               onClick={() => onSectionChange('history')}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-all hover:text-primary japanese-text relative group ${
                 currentSection === 'history' ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
               История
+              {currentSection === 'history' && <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-japan rounded-full"></span>}
             </button>
           </nav>
         </div>

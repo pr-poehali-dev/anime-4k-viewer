@@ -173,6 +173,36 @@ export default function AnimeManager({ authToken, onClose }: AnimeManagerProps) 
     }
   };
 
+  const handleVideoDelete = async (quality: string) => {
+    if (!editingAnime) return;
+    if (!confirm(`Удалить видео ${quality}?`)) return;
+
+    try {
+      const response = await fetch(ANIME_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': authToken
+        },
+        body: JSON.stringify({ 
+          action: 'delete_video', 
+          anime_id: editingAnime.id,
+          quality: quality
+        })
+      });
+
+      if (response.ok) {
+        const qualityKey = `video_quality_${quality}` as keyof typeof formData;
+        setFormData({ ...formData, [qualityKey]: '' });
+        setVideoFiles({ ...videoFiles, [quality]: null });
+      } else {
+        setError('Ошибка удаления видео');
+      }
+    } catch (err) {
+      setError('Ошибка подключения к серверу');
+    }
+  };
+
   const handleCancel = () => {
     setIsAdding(false);
     setEditingAnime(null);
@@ -237,6 +267,7 @@ export default function AnimeManager({ authToken, onClose }: AnimeManagerProps) 
               onUploadModeChange={setUploadMode}
               onCoverFileUpload={handleCoverFileUpload}
               onVideoFileUpload={handleVideoFileUpload}
+              onVideoDelete={handleVideoDelete}
               onSave={handleSave}
               onCancel={handleCancel}
             />

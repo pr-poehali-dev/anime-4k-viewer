@@ -301,6 +301,41 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'body': json.dumps({'success': True, 'message': 'Аниме удалено'}),
                     'isBase64Encoded': False
                 }
+            
+            elif action == 'delete_video':
+                anime_id = body_data.get('anime_id')
+                quality = body_data.get('quality')
+                
+                if not anime_id or not quality:
+                    return {
+                        'statusCode': 400,
+                        'headers': cors_headers,
+                        'body': json.dumps({'error': 'anime_id и quality обязательны'}),
+                        'isBase64Encoded': False
+                    }
+                
+                quality_field = f'video_quality_{quality}'
+                allowed_fields = ['video_quality_4k', 'video_quality_1080p', 'video_quality_720p', 'video_quality_480p']
+                
+                if quality_field not in allowed_fields:
+                    return {
+                        'statusCode': 400,
+                        'headers': cors_headers,
+                        'body': json.dumps({'error': 'Неверное качество видео'}),
+                        'isBase64Encoded': False
+                    }
+                
+                query = f"UPDATE anime SET {quality_field} = '', updated_at = %s WHERE id = %s"
+                cur.execute(query, (datetime.now(), anime_id))
+                
+                conn.commit()
+                
+                return {
+                    'statusCode': 200,
+                    'headers': cors_headers,
+                    'body': json.dumps({'success': True, 'message': f'Видео {quality} удалено'}),
+                    'isBase64Encoded': False
+                }
         
         return {
             'statusCode': 405,

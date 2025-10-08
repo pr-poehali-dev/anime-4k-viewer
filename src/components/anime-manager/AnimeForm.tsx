@@ -16,6 +16,7 @@ interface AnimeFormProps {
   onUploadModeChange: (mode: 'url' | 'file') => void;
   onCoverFileUpload: (file: File) => void;
   onVideoFileUpload: (file: File, quality: string) => void;
+  onVideoDelete?: (quality: string) => void;
   onSave: () => void;
   onCancel: () => void;
 }
@@ -32,6 +33,7 @@ export default function AnimeForm({
   onUploadModeChange,
   onCoverFileUpload,
   onVideoFileUpload,
+  onVideoDelete,
   onSave,
   onCancel
 }: AnimeFormProps) {
@@ -147,6 +149,8 @@ export default function AnimeForm({
         }}
         onFileUpload={onVideoFileUpload}
         onUrlChange={(quality, url) => onFormDataChange({ [quality]: url })}
+        onVideoDelete={onVideoDelete}
+        isEditing={isEditing}
       />
 
       {error && (

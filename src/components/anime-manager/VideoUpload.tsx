@@ -1,4 +1,5 @@
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
 interface VideoUploadProps {
@@ -12,6 +13,8 @@ interface VideoUploadProps {
   };
   onFileUpload: (file: File, quality: string) => void;
   onUrlChange: (quality: string, url: string) => void;
+  onVideoDelete?: (quality: string) => void;
+  isEditing?: boolean;
 }
 
 export default function VideoUpload({
@@ -19,7 +22,9 @@ export default function VideoUpload({
   videoFiles,
   videoUrls,
   onFileUpload,
-  onUrlChange
+  onUrlChange,
+  onVideoDelete,
+  isEditing = false
 }: VideoUploadProps) {
   return (
     <div className="space-y-3">
@@ -45,27 +50,45 @@ export default function VideoUpload({
 
       {uploadMode === 'file' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {['4k', '1080p', '720p', '480p'].map((quality) => (
-            <div key={quality} className="border border-border rounded-lg p-3">
-              <label className="block text-xs font-medium mb-2 uppercase">{quality}</label>
-              <input
-                type="file"
-                accept="video/*"
-                onChange={(e) => e.target.files?.[0] && onFileUpload(e.target.files[0], quality)}
-                className="hidden"
-                id={`video-${quality}`}
-              />
-              <label
-                htmlFor={`video-${quality}`}
-                className="flex items-center gap-2 p-2 bg-muted rounded cursor-pointer hover:bg-muted/70 transition-colors text-sm"
-              >
-                <Icon name={videoFiles[quality] ? 'CheckCircle2' : 'Upload'} size={16} />
-                <span className="flex-1 truncate">
-                  {videoFiles[quality]?.name || 'Выбрать видео'}
-                </span>
-              </label>
-            </div>
-          ))}
+          {['4k', '1080p', '720p', '480p'].map((quality) => {
+            const qualityKey = `video_quality_${quality}` as keyof typeof videoUrls;
+            const hasVideo = videoFiles[quality] || videoUrls[qualityKey];
+            
+            return (
+              <div key={quality} className="border border-border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-medium uppercase">{quality}</label>
+                  {isEditing && hasVideo && onVideoDelete && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => onVideoDelete(quality)}
+                    >
+                      <Icon name="Trash2" size={14} />
+                    </Button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => e.target.files?.[0] && onFileUpload(e.target.files[0], quality)}
+                  className="hidden"
+                  id={`video-${quality}`}
+                />
+                <label
+                  htmlFor={`video-${quality}`}
+                  className="flex items-center gap-2 p-2 bg-muted rounded cursor-pointer hover:bg-muted/70 transition-colors text-sm"
+                >
+                  <Icon name={hasVideo ? 'CheckCircle2' : 'Upload'} size={16} />
+                  <span className="flex-1 truncate">
+                    {videoFiles[quality]?.name || (hasVideo ? `Видео ${quality} загружено` : 'Выбрать видео')}
+                  </span>
+                </label>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-2">
