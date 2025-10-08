@@ -19,6 +19,7 @@ interface HeaderProps {
 
 export default function Header({ currentSection, onSectionChange, onSearch, onAdminClick, onAuthClick, onAdvancedAdminClick, onChatClick, onAnimeManagerClick, currentUser, onLogout }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +72,14 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
         </div>
 
         <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <Icon name={mobileMenuOpen ? "X" : "Menu"} size={24} />
+          </Button>
           <form onSubmit={handleSearch} className="relative hidden sm:block">
             <Icon name="Search" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <Input
@@ -135,6 +144,88 @@ export default function Header({ currentSection, onSectionChange, onSearch, onAd
           )}
         </div>
       </div>
+
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-border/40 bg-background">
+          <nav className="container py-4 flex flex-col gap-3">
+            <button
+              onClick={() => { onSectionChange('home'); setMobileMenuOpen(false); }}
+              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentSection === 'home' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+              }`}
+            >
+              Главная
+            </button>
+            <button
+              onClick={() => { onSectionChange('catalog'); setMobileMenuOpen(false); }}
+              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentSection === 'catalog' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+              }`}
+            >
+              Каталог
+            </button>
+            <button
+              onClick={() => { onSectionChange('favorites'); setMobileMenuOpen(false); }}
+              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentSection === 'favorites' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+              }`}
+            >
+              Избранное
+            </button>
+            <button
+              onClick={() => { onSectionChange('history'); setMobileMenuOpen(false); }}
+              className={`text-left px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentSection === 'history' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+              }`}
+            >
+              История
+            </button>
+
+            {currentUser && onChatClick && (
+              <button
+                onClick={() => { onChatClick(); setMobileMenuOpen(false); }}
+                className="text-left px-4 py-2 rounded-lg font-medium transition-colors hover:bg-muted flex items-center gap-2"
+              >
+                <Icon name="MessageCircle" size={16} />
+                Чат
+              </button>
+            )}
+
+            {currentUser?.is_admin && onAdvancedAdminClick && (
+              <button
+                onClick={() => { onAdvancedAdminClick(); setMobileMenuOpen(false); }}
+                className="text-left px-4 py-2 rounded-lg font-medium transition-colors hover:bg-muted flex items-center gap-2"
+              >
+                <Icon name="Shield" size={16} />
+                Админ-панель
+              </button>
+            )}
+
+            {currentUser?.is_admin && onAnimeManagerClick && (
+              <button
+                onClick={() => { onAnimeManagerClick(); setMobileMenuOpen(false); }}
+                className="text-left px-4 py-2 rounded-lg font-medium transition-colors hover:bg-muted flex items-center gap-2"
+              >
+                <Icon name="Film" size={16} />
+                Управление аниме
+              </button>
+            )}
+
+            <form onSubmit={(e) => { handleSearch(e); setMobileMenuOpen(false); }} className="px-4 py-2">
+              <div className="relative">
+                <Icon name="Search" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input
+                  type="search"
+                  placeholder="Поиск аниме..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-muted/50"
+                />
+              </div>
+            </form>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
